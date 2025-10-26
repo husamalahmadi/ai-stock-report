@@ -1,0 +1,20 @@
+{
+  "name": "AI Stock Report",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "features": {},
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "files.exclude": {
+          "**/node_modules": true,
+          "**/dist": true
+        }
+      },
+      "extensions": [
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "forwardPorts": [5050, 5173]
+}
