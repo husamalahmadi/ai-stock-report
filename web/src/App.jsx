@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5050';
+const API_BASE = 'https://sinister-bat-7777r9qa7693qvj-5050.app.github.dev' || 'http://localhost:5050';
+console.log("Using API:", API_BASE);
 
 export default function App() {
   const [ticker, setTicker] = useState('TSLA');
