@@ -1,72 +1,62 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar
 } from 'recharts';
 
-/**
- * Option B — Static JSON datasets
- * Put your files under: web/public/data/
- * Example: web/public/data/NASDAQ_TSLA.json
- * Format: { "ticker":"TSLA", "exchange":"NASDAQ", "rows":[ {year, revenue, operatingIncome, netIncome, sharesOutstanding?}, ... ] }
- */
-const DATASETS = [
-  { label: 'TSLA (NASDAQ)', path: '/data/NASDAQ_TSLA.json' },
-  // Add more here, e.g.:
-  // { label: 'AAPL (NASDAQ)', path: '/data/NASDAQ_AAPL.json' },
-  // { label: 'MSFT (NASDAQ)', path: '/data/NASDAQ_MSFT.json' },
-];
+const DATA_URL = '/data/companies.json'; // single file with multiple companies
 
 export default function App() {
-  const [datasetPath, setDatasetPath] = useState(DATASETS[0]?.path || '');
-  const [ticker, setTicker] = useState('TSLA');
-  const [exchange, setExchange] = useState('NASDAQ');
+  const [companies, setCompanies] = useState([]);       // [{ticker, exchange, rows:[]}, ...]
+  const [selectedKey, setSelectedKey] = useState('');   // e.g., 'NASDAQ:AAPL'
   const [targetPE, setTargetPE] = useState(25);
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  async function loadDataset() {
-    try {
-      setLoading(true);
-      setError('');
-      setRows([]);
-
-      if (!datasetPath) throw new Error('No dataset selected');
-      const r = await fetch(datasetPath, { cache: 'no-store' });
-      if (!r.ok) {
-        const txt = await r.text();
-        throw new Error(`Failed to load ${datasetPath}: ${r.status} ${txt}`);
+  // Load companies.json on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const r = await fetch(DATA_URL, { cache: 'no-store' });
+        if (!r.ok) throw new Error(`Failed to load ${DATA_URL}: ${r.status}`);
+        const j = await r.json();
+        const list = Array.isArray(j.companies) ? j.companies : [];
+        setCompanies(list);
+        if (list.length) {
+          const first = list[0];
+          setSelectedKey(keyOf(first.exchange, first.ticker));
+        }
+      } catch (e) {
+        setError(e.message || 'Failed to load data');
+      } finally {
+        setLoading(false);
       }
-      const j = await r.json();
-      // Expect j = { ticker, exchange, rows: [...] }
-      const cleaned = normalizeFinancialRows(j.rows || []);
-      setRows(cleaned);
-      setTicker(j.ticker || '—');
-      setExchange(j.exchange || '—');
-    } catch (e) {
-      setError(e.message || 'Failed to load dataset');
-    } finally {
-      setLoading(false);
-    }
-  }
+    })();
+  }, []);
 
-  // Build chart series
+  const company = useMemo(() => {
+    if (!selectedKey || !companies.length) return null;
+    const [ex, tk] = selectedKey.split(':');
+    return companies.find(c => c.exchange === ex && c.ticker === tk) || null;
+  }, [selectedKey, companies]);
+
+  const rows = useMemo(() => normalizeFinancialRows(company?.rows || []), [company]);
+  const growth = useMemo(() => calcGrowth(rows), [rows]);
+  const fair = useMemo(() => computeFairValuePerYear(rows, Number(targetPE) || 0), [rows, targetPE]);
+
   const charts = useMemo(() => ({
     revenue: rows.map(r => ({ year: r.year, value: r.revenue })),
     operatingIncome: rows.map(r => ({ year: r.year, value: r.operatingIncome })),
     netIncome: rows.map(r => ({ year: r.year, value: r.netIncome })),
   }), [rows]);
 
-  const growth = useMemo(() => calcGrowth(rows), [rows]);
-  const fair = useMemo(() => computeFairValuePerYear(rows, Number(targetPE) || 0), [rows, targetPE]);
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="px-6 py-4 shadow bg-white">
-        <h1 className="text-2xl font-bold">AI Stock Report (Static JSON mode)</h1>
+        <h1 className="text-2xl font-bold">AI Stock Report (Static JSON • Multi-company)</h1>
         <p className="text-sm text-gray-600">
-          Loads pre-generated JSON files from <code>/public/data</code> — no server required.
+          Loads multiple companies from <code>/public/data/companies.json</code> — no server required.
         </p>
       </header>
 
@@ -75,18 +65,21 @@ export default function App() {
           <h2 className="font-semibold mb-3">Data Source</h2>
           <div className="grid md:grid-cols-4 gap-4 items-end">
             <div className="md:col-span-2">
-              <label className="block text-sm mb-1">Dataset file</label>
+              <label className="block text-sm mb-1">Company</label>
               <select
-                value={datasetPath}
-                onChange={e => setDatasetPath(e.target.value)}
+                value={selectedKey}
+                onChange={e => setSelectedKey(e.target.value)}
                 className="border rounded p-2 w-full"
+                disabled={loading || !companies.length}
               >
-                {DATASETS.map(d => (
-                  <option key={d.path} value={d.path}>{d.label} — {d.path}</option>
+                {companies.map(c => (
+                  <option key={keyOf(c.exchange, c.ticker)} value={keyOf(c.exchange, c.ticker)}>
+                    {c.ticker} ({c.exchange})
+                  </option>
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Files must exist in <code>web/public/data/</code>, e.g. <code>/data/NASDAQ_TSLA.json</code>
+                File: <code>{DATA_URL}</code>
               </p>
             </div>
 
@@ -100,14 +93,8 @@ export default function App() {
             </div>
 
             <div>
-              <button
-                onClick={loadDataset}
-                className="bg-black text-white rounded px-4 py-2 w-full disabled:opacity-50"
-                disabled={loading}
-              >
-                {loading ? 'Loading…' : 'Load Dataset'}
-              </button>
-              {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+              {error && <p className="text-red-600 text-sm">{error}</p>}
+              {loading && <p className="text-sm text-gray-600">Loading…</p>}
             </div>
           </div>
         </section>
@@ -117,14 +104,14 @@ export default function App() {
             <section className="bg-white rounded-2xl shadow p-4">
               <h2 className="font-semibold mb-1">Meta</h2>
               <p className="text-sm text-gray-700">
-                <strong>Ticker:</strong> {ticker} &nbsp; | &nbsp;
-                <strong>Exchange:</strong> {exchange} &nbsp; | &nbsp;
+                <strong>Ticker:</strong> {company?.ticker || '—'} &nbsp; | &nbsp;
+                <strong>Exchange:</strong> {company?.exchange || '—'} &nbsp; | &nbsp;
                 <strong>Years:</strong> {rows.map(r => r.year).join(', ')}
               </p>
             </section>
 
             <section className="grid md:grid-cols-2 gap-6">
-              <Card title={`Revenue (${ticker})`}>
+              <Card title={`Revenue (${company?.ticker || '—'})`}>
                 <ChartLines series={[{ name: 'Revenue', data: charts.revenue }]} />
               </Card>
               <Card title="Operating Income">
@@ -161,40 +148,33 @@ export default function App() {
   );
 }
 
-/* ---------------- Helpers (same math as the server) ---------------- */
+/* ---------------- Helpers ---------------- */
+
+function keyOf(exchange, ticker) {
+  return `${exchange}:${ticker}`;
+}
 
 function normalizeFinancialRows(arr) {
-  // Ensure array of objects with year, revenue, operatingIncome, netIncome, sharesOutstanding?
+  // arr is already structured in our JSON, but normalize just in case.
   const out = [];
   for (const r of arr) {
-    const m = lowerMap(r);
-    const year = num(m.get('year'));
-    const revenue = num(m.get('revenue') ?? m.get('sales'));
-    const op = num(m.get('operatingincome') ?? m.get('operating_income'));
-    const net = num(m.get('netincome') ?? m.get('net_income'));
-    const shares = m.has('sharesoutstanding') ? num(m.get('sharesoutstanding')) : null;
+    const year = num(r.year);
+    const revenue = num(r.revenue);
+    const op = num(r.operatingIncome);
+    const net = num(r.netIncome);
+    const shares = numOrNull(r.sharesOutstanding);
     if (!Number.isFinite(year)) continue;
-    out.push({
-      year,
-      revenue,
-      operatingIncome: op,
-      netIncome: net,
-      sharesOutstanding: shares
-    });
+    out.push({ year, revenue, operatingIncome: op, netIncome: net, sharesOutstanding: shares });
   }
   out.sort((a, b) => a.year - b.year);
   return out;
 }
 
-function lowerMap(obj) {
-  const m = new Map();
-  for (const [k, v] of Object.entries(obj || {})) {
-    m.set(String(k || '').trim().toLowerCase(), v);
-  }
-  return m;
-}
-
 function num(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+function numOrNull(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }

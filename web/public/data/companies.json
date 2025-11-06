@@ -1,0 +1,26 @@
+{
+  "companies": [
+    {
+      "ticker": "AAPL",
+      "exchange": "NASDAQ",
+      "rows": [
+        { "year": 2020, "revenue": 274515, "operatingIncome": 66288,  "netIncome": 57411,  "sharesOutstanding": 15700 },
+        { "year": 2021, "revenue": 365817, "operatingIncome": 108949, "netIncome": 94680,  "sharesOutstanding": 16200 },
+        { "year": 2022, "revenue": 394328, "operatingIncome": 119437, "netIncome": 99803,  "sharesOutstanding": 16000 },
+        { "year": 2023, "revenue": 383285, "operatingIncome": 114301, "netIncome": 96995,  "sharesOutstanding": 15750 },
+        { "year": 2024, "revenue": 387000, "operatingIncome": 116000, "netIncome": 100000, "sharesOutstanding": 15600 }
+      ]
+    },
+    {
+      "ticker": "MSFT",
+      "exchange": "NASDAQ",
+      "rows": [
+        { "year": 2020, "revenue": 143015, "operatingIncome": 52955, "netIncome": 44281, "sharesOutstanding": 7600 },
+        { "year": 2021, "revenue": 168088, "operatingIncome": 69716, "netIncome": 61271, "sharesOutstanding": 7600 },
+        { "year": 2022, "revenue": 198270, "operatingIncome": 83683, "netIncome": 72738, "sharesOutstanding": 7500 },
+        { "year": 2023, "revenue": 211915, "operatingIncome": 88252, "netIncome": 72436, "sharesOutstanding": 7450 },
+        { "year": 2024, "revenue": 245000, "operatingIncome": 100000, "netIncome": 90000, "sharesOutstanding": 7400 }
+      ]
+    }
+  ]
+}
