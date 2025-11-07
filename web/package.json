@@ -1,4 +1,3 @@
-
 {
   "name": "ai-stock-report-web",
   "version": "1.0.0",
@@ -10,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.79",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^2.12.7"
